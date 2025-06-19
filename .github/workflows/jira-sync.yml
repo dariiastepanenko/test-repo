@@ -1,0 +1,33 @@
+name: Jira Sync
+on:
+  push:
+    branches:
+      - 'TEST-*'
+      - 'KAN-*'
+  pull_request:
+    types: [opened, closed]
+
+jobs:
+  update-jira:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract issue key from branch
+        id: extract-key
+        run: |
+          if [[ "${{ github.ref }}" =~ refs/heads/(TEST-[0-9]+|KAN-[0-9]+) ]]; then
+            echo "issue_key=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.head_ref }}" =~ (TEST-[0-9]+|KAN-[0-9]+) ]]; then
+            echo "issue_key=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update Jira on push
+        if: github.event_name == 'push' && steps.extract-key.outputs.issue_key
+        run: |
+          echo "Would transition ${{ steps.extract-key.outputs.issue_key }} to IN PROGRESS"
+          # TODO: Add Jira API call here
+
+      - name: Update Jira on PR
+        if: github.event_name == 'pull_request' && steps.extract-key.outputs.issue_key
+        run: |
+          echo "Would transition ${{ steps.extract-key.outputs.issue_key }} to NEED TO TEST"
+          # TODO: Add Jira API call here
