@@ -20,14 +20,34 @@ jobs:
             echo "issue_key=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Get Jira transitions
+        id: get-transitions
+        if: steps.extract-key.outputs.issue_key
+        run: |
+          AUTH=$(echo -n "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" | base64)
+          curl -s -H "Authorization: Basic $AUTH" \
+            "${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue/${{ steps.extract-key.outputs.issue_key }}/transitions" \
+            > transitions.json
+          cat transitions.json
+
       - name: Update Jira on push
         if: github.event_name == 'push' && steps.extract-key.outputs.issue_key
         run: |
-          echo "Would transition ${{ steps.extract-key.outputs.issue_key }} to IN PROGRESS"
-          # TODO: Add Jira API call here
+          AUTH=$(echo -n "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" | base64)
+          # Transition to "In Progress" (ID: 21 - adjust if needed)
+          curl -X POST -H "Authorization: Basic $AUTH" \
+            -H "Content-Type: application/json" \
+            -d '{"transition":{"id":"21"}}' \
+            "${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue/${{ steps.extract-key.outputs.issue_key }}/transitions"
+          echo "Transitioned ${{ steps.extract-key.outputs.issue_key }} to IN PROGRESS"
 
       - name: Update Jira on PR
         if: github.event_name == 'pull_request' && steps.extract-key.outputs.issue_key
         run: |
-          echo "Would transition ${{ steps.extract-key.outputs.issue_key }} to NEED TO TEST"
-          # TODO: Add Jira API call here
+          AUTH=$(echo -n "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" | base64)
+          # Transition to "Need To Test" (ID: adjust based on your workflow)
+          curl -X POST -H "Authorization: Basic $AUTH" \
+            -H "Content-Type: application/json" \
+            -d '{"transition":{"id":"31"}}' \
+            "${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue/${{ steps.extract-key.outputs.issue_key }}/transitions"
+          echo "Transitioned ${{ steps.extract-key.outputs.issue_key }} to NEED TO TEST"
